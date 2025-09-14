@@ -34,7 +34,7 @@ impl DateRange {
 
     /// Checks if a date falls within this range (inclusive).
     pub fn contains(&self, date: &str) -> bool {
-        date >= &self.start && date <= &self.end
+        date >= self.start.as_str() && date <= self.end.as_str()
     }
 }
 

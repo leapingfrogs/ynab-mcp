@@ -9,4 +9,5 @@ pub mod domain;
 pub mod server;
 
 // Re-export key types for convenience
+pub use adapters::YnabClient;
 pub use domain::*;

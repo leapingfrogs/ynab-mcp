@@ -1,19 +1,162 @@
-//! YNAB API client.
+//! YNAB API client for making HTTP requests to the YNAB API.
 
-/// Placeholder for YNAB API client.
-/// This will be implemented in later iterations following TDD.
-pub struct YnabClient;
+use crate::domain::{YnabError, YnabResult};
 
-impl YnabClient {
-    /// Creates a new YNAB client instance.
-    pub fn new() -> Self {
-        Self
-    }
+/// YNAB API client with authentication and HTTP capabilities.
+#[derive(Debug, Clone)]
+pub struct YnabClient {
+    api_token: String,
+    base_url: String,
+    client: reqwest::Client,
 }
 
-impl Default for YnabClient {
-    fn default() -> Self {
-        Self::new()
+impl YnabClient {
+    /// Creates a new YNAB client with API token.
+    ///
+    /// # Example
+    /// ```
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// assert_eq!(client.api_token(), "your-api-token");
+    /// ```
+    pub fn new(api_token: String) -> Self {
+        Self {
+            api_token,
+            base_url: "https://api.ynab.com/v1".to_string(),
+            client: reqwest::Client::new(),
+        }
+    }
+
+    /// Creates a new YNAB client with custom base URL for testing.
+    ///
+    /// # Example
+    /// ```
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// let client = YnabClient::new_with_base_url(
+    ///     "test-token".to_string(),
+    ///     "http://localhost:8080".to_string()
+    /// );
+    /// assert_eq!(client.base_url(), "http://localhost:8080");
+    /// ```
+    pub fn new_with_base_url(api_token: String, base_url: String) -> Self {
+        Self {
+            api_token,
+            base_url,
+            client: reqwest::Client::new(),
+        }
+    }
+
+    /// Returns the API token (for testing purposes).
+    pub fn api_token(&self) -> &str {
+        &self.api_token
+    }
+
+    /// Returns the base URL (for testing purposes).
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    /// Validates that the API token is not empty.
+    pub fn validate_token(&self) -> YnabResult<()> {
+        if self.api_token.trim().is_empty() {
+            return Err(YnabError::invalid_budget_id("API token cannot be empty"));
+        }
+        Ok(())
+    }
+
+    /// Makes an authenticated GET request to the YNAB API and returns JSON response.
+    ///
+    /// # Arguments
+    /// * `path` - The API path (e.g., "/budgets")
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// let response = client.get_json("/budgets").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_json(&self, path: &str) -> YnabResult<serde_json::Value> {
+        let url = format!("{}{}", self.base_url, path);
+
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(YnabError::api_error(format!(
+                "HTTP {} for {}",
+                response.status(),
+                url
+            )));
+        }
+
+        let json = response.json::<serde_json::Value>().await?;
+        Ok(json)
+    }
+
+    /// Gets the list of budgets for the authenticated user.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// let budgets = client.get_budgets().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_budgets(&self) -> YnabResult<serde_json::Value> {
+        self.get_json("/budgets").await
+    }
+
+    /// Gets the categories for a specific budget.
+    ///
+    /// # Arguments
+    /// * `budget_id` - The ID of the budget
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// let categories = client.get_categories("budget-123").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_categories(&self, budget_id: &str) -> YnabResult<serde_json::Value> {
+        let path = format!("/budgets/{}/categories", budget_id);
+        self.get_json(&path).await
+    }
+
+    /// Gets the transactions for a specific budget.
+    ///
+    /// # Arguments
+    /// * `budget_id` - The ID of the budget
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// let transactions = client.get_transactions("budget-123").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_transactions(&self, budget_id: &str) -> YnabResult<serde_json::Value> {
+        let path = format!("/budgets/{}/transactions", budget_id);
+        self.get_json(&path).await
     }
 }
 
@@ -22,18 +165,130 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_create_ynab_client_with_new() {
-        let client = YnabClient::new();
+    fn should_create_ynab_client_with_api_token() {
+        // RED: This test should fail initially due to missing reqwest dependency
+        let client = YnabClient::new("test-api-token".to_string());
 
-        // Basic creation test - placeholder will be expanded in future iterations
-        assert_eq!(std::mem::size_of_val(&client), 0); // Zero-sized struct
+        assert_eq!(client.api_token(), "test-api-token");
+        assert_eq!(client.base_url(), "https://api.ynab.com/v1");
     }
 
     #[test]
-    fn should_create_ynab_client_with_default() {
-        let _client = YnabClient;
+    fn should_create_ynab_client_with_custom_base_url() {
+        let client = YnabClient::new_with_base_url(
+            "test-token".to_string(),
+            "http://localhost:8080".to_string(),
+        );
 
-        // Test that we can create via Default trait - clippy prefers direct construction for unit structs
-        let _default_client: YnabClient = Default::default();
+        assert_eq!(client.api_token(), "test-token");
+        assert_eq!(client.base_url(), "http://localhost:8080");
+    }
+
+    #[test]
+    fn should_validate_non_empty_api_token() {
+        let client = YnabClient::new("valid-token".to_string());
+
+        let result = client.validate_token();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn should_reject_empty_api_token() {
+        let client = YnabClient::new("".to_string());
+
+        let result = client.validate_token();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), YnabError::InvalidBudgetId(_)));
+    }
+
+    #[test]
+    fn should_reject_whitespace_only_api_token() {
+        let client = YnabClient::new("   ".to_string());
+
+        let result = client.validate_token();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_support_clone() {
+        let client = YnabClient::new("test-token".to_string());
+        let cloned_client = client.clone();
+
+        assert_eq!(client.api_token(), cloned_client.api_token());
+        assert_eq!(client.base_url(), cloned_client.base_url());
+    }
+
+    #[tokio::test]
+    async fn should_build_correct_url_for_get_request() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        // For now, test that the method exists and returns a Result
+        // In a real scenario, we'd mock the HTTP client
+        let result = client.get_json("/budgets").await;
+
+        // This will fail with a network error since it's a fake URL,
+        // which proves our method is trying to make the request
+        assert!(result.is_err());
+
+        // The error should be an HttpApiError (from reqwest)
+        match result.unwrap_err() {
+            YnabError::HttpApiError(_) => {} // Expected - network error
+            other => panic!("Expected HttpApiError, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn should_get_budgets_list() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        // This test will fail initially - we need to implement get_budgets method
+        let result = client.get_budgets().await;
+        assert!(result.is_err()); // Expected to fail with network error for fake URL
+
+        // Should be trying to make an HTTP request
+        match result.unwrap_err() {
+            YnabError::HttpApiError(_) => {} // Expected - network error
+            other => panic!("Expected HttpApiError, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn should_get_categories_for_budget() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        // This test will fail initially - we need to implement get_categories method
+        let result = client.get_categories("budget-123").await;
+        assert!(result.is_err()); // Expected to fail with network error for fake URL
+
+        match result.unwrap_err() {
+            YnabError::HttpApiError(_) => {} // Expected - network error
+            other => panic!("Expected HttpApiError, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn should_get_transactions_for_budget() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        // This test will fail initially - we need to implement get_transactions method
+        let result = client.get_transactions("budget-123").await;
+        assert!(result.is_err()); // Expected to fail with network error for fake URL
+
+        match result.unwrap_err() {
+            YnabError::HttpApiError(_) => {} // Expected - network error
+            other => panic!("Expected HttpApiError, got: {:?}", other),
+        }
     }
 }

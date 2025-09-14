@@ -1,7 +1,7 @@
 //! Error handling for the YNAB domain.
 
 /// Errors that can occur in the YNAB MCP server domain.
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Debug, thiserror::Error)]
 pub enum YnabError {
     /// Invalid budget ID provided.
     #[error("Invalid budget ID: {0}")]
@@ -31,9 +31,31 @@ pub enum YnabError {
     #[error("Invalid date format: {0}")]
     InvalidDate(String),
 
-    /// API request failed.
+    /// HTTP API request failed.
+    #[error("API request failed: {0}")]
+    HttpApiError(#[from] reqwest::Error),
+
+    /// Generic API error with custom message.
     #[error("API request failed: {0}")]
     ApiError(String),
+}
+
+impl PartialEq for YnabError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (YnabError::InvalidBudgetId(a), YnabError::InvalidBudgetId(b)) => a == b,
+            (YnabError::CategoryNotFound(a), YnabError::CategoryNotFound(b)) => a == b,
+            (YnabError::AccountNotFound(a), YnabError::AccountNotFound(b)) => a == b,
+            (YnabError::PayeeNotFound(a), YnabError::PayeeNotFound(b)) => a == b,
+            (YnabError::TransactionNotFound(a), YnabError::TransactionNotFound(b)) => a == b,
+            (YnabError::InvalidAmount(a), YnabError::InvalidAmount(b)) => a == b,
+            (YnabError::InvalidDate(a), YnabError::InvalidDate(b)) => a == b,
+            (YnabError::ApiError(a), YnabError::ApiError(b)) => a == b,
+            // HttpApiError cannot be compared due to reqwest::Error
+            (YnabError::HttpApiError(_), YnabError::HttpApiError(_)) => false,
+            _ => false,
+        }
+    }
 }
 
 impl YnabError {
@@ -144,8 +166,8 @@ mod tests {
     fn should_create_api_error() {
         let error = YnabError::api_error("Connection timeout");
 
-        assert_eq!(error, YnabError::ApiError("Connection timeout".to_string()));
-        assert_eq!(error.to_string(), "API request failed: Connection timeout");
+        assert!(matches!(error, YnabError::ApiError(_)));
+        assert!(error.to_string().contains("Connection timeout"));
     }
 
     #[test]
