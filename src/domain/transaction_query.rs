@@ -110,14 +110,16 @@ impl TransactionQuery {
         let amount = transaction.amount();
 
         if let Some(min) = self.min_amount
-            && amount < min {
-                return false;
-            }
+            && amount < min
+        {
+            return false;
+        }
 
         if let Some(max) = self.max_amount
-            && amount > max {
-                return false;
-            }
+            && amount > max
+        {
+            return false;
+        }
 
         true
     }
@@ -177,16 +179,19 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000), // $5.00 expense
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-15000), // $15.00 expense
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000), // $100.00 income
             ),
@@ -209,11 +214,13 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(50000),
             ),
@@ -233,21 +240,25 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(50000),
             ),
             Transaction::new(
                 "txn-4".to_string(),
+                "acc-test".to_string(),
                 "restaurants".to_string(),
                 Money::from_milliunits(-2000),
             ),
@@ -269,11 +280,13 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
             ),
@@ -293,18 +306,21 @@ mod tests {
         let transactions = vec![
             Transaction::new_with_description(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
                 "Whole Foods Market".to_string(),
             ),
             Transaction::new_with_description(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
                 "Shell Gas Station".to_string(),
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(50000),
             ),
@@ -323,6 +339,7 @@ mod tests {
     fn should_perform_case_insensitive_text_search() {
         let transactions = vec![Transaction::new_with_description(
             "txn-1".to_string(),
+            "acc-test".to_string(),
             "groceries".to_string(),
             Money::from_milliunits(-5000),
             "COSTCO WAREHOUSE".to_string(),
@@ -342,16 +359,19 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
             ),
@@ -373,16 +393,19 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
             ),
@@ -404,18 +427,21 @@ mod tests {
         let transactions = vec![
             Transaction::new_with_date(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
                 "2024-01-20".to_string(),
             ),
             Transaction::new_with_date(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
                 "2024-01-15".to_string(),
             ),
             Transaction::new_with_date(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
                 "2024-01-25".to_string(),

@@ -7,6 +7,7 @@ use crate::domain::{DateRange, Money, Transaction};
 pub struct Category {
     id: String,
     name: String,
+    group_id: Option<String>,
 }
 
 impl Category {
@@ -21,7 +22,32 @@ impl Category {
     /// assert_eq!(category.name(), "Groceries");
     /// ```
     pub fn new(id: String, name: String) -> Self {
-        Self { id, name }
+        Self {
+            id,
+            name,
+            group_id: None,
+        }
+    }
+
+    /// Creates a new Category with a category group.
+    ///
+    /// # Example
+    /// ```
+    /// use ynab_mcp::Category;
+    ///
+    /// let category = Category::new_with_group(
+    ///     "rent".to_string(),
+    ///     "Rent".to_string(),
+    ///     "monthly-bills".to_string()
+    /// );
+    /// assert_eq!(category.group_id(), Some("monthly-bills"));
+    /// ```
+    pub fn new_with_group(id: String, name: String, group_id: String) -> Self {
+        Self {
+            id,
+            name,
+            group_id: Some(group_id),
+        }
     }
 
     /// Returns the category ID.
@@ -34,6 +60,11 @@ impl Category {
         &self.name
     }
 
+    /// Returns the category group ID if this category belongs to a group.
+    pub fn group_id(&self) -> Option<&str> {
+        self.group_id.as_deref()
+    }
+
     /// Calculates the total spending for this category from a list of transactions.
     ///
     /// # Example
@@ -42,7 +73,7 @@ impl Category {
     ///
     /// let category = Category::new("groceries".to_string(), "Groceries".to_string());
     /// let transactions = vec![
-    ///     Transaction::new("txn-1".to_string(), "groceries".to_string(), Money::from_milliunits(-5000)),
+    ///     Transaction::new("txn-1".to_string(), "acc-test".to_string(), "groceries".to_string(), Money::from_milliunits(-5000)),
     /// ];
     /// let spending = category.calculate_spending(&transactions);
     /// assert_eq!(spending, Money::from_milliunits(-5000));
@@ -63,7 +94,7 @@ impl Category {
     ///
     /// let category = Category::new("groceries".to_string(), "Groceries".to_string());
     /// let transactions = vec![
-    ///     Transaction::new_with_date("txn-1".to_string(), "groceries".to_string(),
+    ///     Transaction::new_with_date("txn-1".to_string(), "acc-test".to_string(), "groceries".to_string(),
     ///                               Money::from_milliunits(-5000), "2024-01-15".to_string()),
     /// ];
     /// let date_range = Some(DateRange::new("2024-01-01".to_string(), "2024-01-31".to_string()));
@@ -112,6 +143,7 @@ mod tests {
         let category = Category::new("groceries".to_string(), "Groceries".to_string());
         let transactions = vec![Transaction::new(
             "txn-1".to_string(),
+            "acc-test".to_string(),
             "groceries".to_string(),
             Money::from_milliunits(-5000), // $5.00 expense
         )];
@@ -127,16 +159,19 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-3000), // $3.00 expense
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-2000), // $2.00 expense
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(), // Different category - should be ignored
                 Money::from_milliunits(-4000),
             ),
@@ -154,18 +189,21 @@ mod tests {
         let transactions = vec![
             Transaction::new_with_date(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-3000),
                 "2024-01-15".to_string(),
             ),
             Transaction::new_with_date(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-2000),
                 "2024-01-25".to_string(),
             ),
             Transaction::new_with_date(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-1000),
                 "2024-02-05".to_string(), // Outside date range
@@ -189,12 +227,14 @@ mod tests {
         let transactions = vec![
             Transaction::new_with_date(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-3000),
                 "2024-01-15".to_string(),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-2000), // No date - should be excluded
             ),
@@ -217,12 +257,14 @@ mod tests {
         let transactions = vec![
             Transaction::new_with_date(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-3000),
                 "2024-01-15".to_string(),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-2000), // No date but should be included
             ),
@@ -232,5 +274,25 @@ mod tests {
 
         // Should include all transactions: -3000 + -2000 = -5000
         assert_eq!(spending, Money::from_milliunits(-5000));
+    }
+
+    #[test]
+    fn should_create_category_with_group() {
+        let category = Category::new_with_group(
+            "rent".to_string(),
+            "Rent".to_string(),
+            "monthly-bills".to_string(),
+        );
+
+        assert_eq!(category.id(), "rent");
+        assert_eq!(category.name(), "Rent");
+        assert_eq!(category.group_id(), Some("monthly-bills"));
+    }
+
+    #[test]
+    fn should_create_category_without_group() {
+        let category = Category::new("groceries".to_string(), "Groceries".to_string());
+
+        assert_eq!(category.group_id(), None);
     }
 }

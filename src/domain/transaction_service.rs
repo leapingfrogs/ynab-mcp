@@ -28,7 +28,7 @@ impl TransactionService {
     /// use ynab_mcp::{TransactionService, Transaction, Money};
     ///
     /// let transactions = vec![
-    ///     Transaction::new("txn-1".to_string(), "groceries".to_string(), Money::from_milliunits(-5000)),
+    ///     Transaction::new("txn-1".to_string(), "acc-test".to_string(), "groceries".to_string(), Money::from_milliunits(-5000)),
     /// ];
     /// let service = TransactionService::with_transactions(transactions);
     /// ```
@@ -85,11 +85,13 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
             ),
@@ -105,16 +107,19 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
             ),
             Transaction::new(
                 "txn-3".to_string(),
+                "acc-test".to_string(),
                 "gas".to_string(),
                 Money::from_milliunits(-3000),
             ),
@@ -135,6 +140,7 @@ mod tests {
         let mut service = TransactionService::new();
         let transaction = Transaction::new(
             "txn-1".to_string(),
+            "acc-test".to_string(),
             "groceries".to_string(),
             Money::from_milliunits(-5000),
         );
@@ -150,11 +156,13 @@ mod tests {
         let transactions = vec![
             Transaction::new(
                 "txn-1".to_string(),
+                "acc-test".to_string(),
                 "groceries".to_string(),
                 Money::from_milliunits(-5000),
             ),
             Transaction::new(
                 "txn-2".to_string(),
+                "acc-test".to_string(),
                 "salary".to_string(),
                 Money::from_milliunits(100000),
             ),

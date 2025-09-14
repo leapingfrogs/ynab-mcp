@@ -190,25 +190,91 @@ ynab-mcp-server/
 - Create initial project structure
 - NO production code yet!
 
-### Iteration 1: Category Spending (Current)
-Focus on implementing category spending analysis:
+### Iteration 1: Category Spending (COMPLETED)
+✅ Implemented category spending analysis:
+- Domain model for `Category`, `Transaction`, `Money`
+- Spending calculation with date filtering
+- Transaction querying and filtering system
+- TransactionService for aggregations
+- 92.75% test coverage achieved
 
-1. Start with domain model tests for `Category`
-2. Test spending calculation logic
-3. Test category aggregation
-4. Only then implement MCP tool handler
+### Iteration 2: Domain Model Completion (CURRENT)
+Focus on completing missing domain entities and error handling:
 
-Example test sequence:
+**Phase 2.1: Missing Domain Entities**
+1. Add `Payee` entity with full TDD
+2. Add `Account` entity with account types
+3. Add `CategoryGroup` for organizing categories
+4. Enhance `Transaction` with payee_id, account_id fields
+
+**Phase 2.2: Error Handling & Validation**
+1. Implement `YnabError` enum with thiserror
+2. Add input validation functions
+3. Add Result<T, YnabError> return types
+4. Test all error conditions
+
+Example TDD sequence:
 ```rust
-// 1. Test category creation
-// 2. Test money calculations  
-// 3. Test spending aggregation
-// 4. Test date filtering
-// 5. Test MCP tool response
+// 1. Test Payee creation and validation
+// 2. Test Account creation with types
+// 3. Test enhanced Transaction with all fields
+// 4. Test error conditions and validation
+// 5. Test CategoryGroup organization
 ```
 
-### Iteration 2: Transaction Analysis
-Will focus on transaction querying and filtering.
+### Iteration 3: YNAB API Integration
+Implementation of HTTP client and API integration:
+
+**Phase 3.1: HTTP Client Foundation**
+1. Add reqwest dependency when tests require it
+2. Implement YnabClient with authentication
+3. Add base URL configuration and error handling
+
+**Phase 3.2: API Endpoint Implementation**
+1. GET /budgets - Fetch budget list
+2. GET /budgets/{budget_id} - Fetch budget details
+3. GET /budgets/{budget_id}/categories - Fetch categories
+4. GET /budgets/{budget_id}/transactions - Fetch transactions
+5. GET /budgets/{budget_id}/payees - Fetch payees
+
+**Phase 3.3: Data Mapping Layer**
+1. Convert YNAB API responses to domain models
+2. Handle API rate limiting and error responses
+3. Add comprehensive integration tests with mocks
+
+### Iteration 4: MCP Server Implementation
+Build the Model Context Protocol server:
+
+**Phase 4.1: MCP Protocol Foundation**
+1. Add MCP protocol message handling
+2. Implement tool discovery and registration
+3. Add JSON-RPC communication layer
+
+**Phase 4.2: Budget Analysis Tools**
+1. `analyze_category_spending` - Category spending analysis
+2. `get_budget_overview` - Complete budget summary
+3. `search_transactions` - Advanced transaction search
+4. `compare_periods` - Period-over-period comparisons
+
+**Phase 4.3: Tool Integration**
+1. Connect tools to YNAB API client
+2. Add proper error handling and validation
+3. Implement response formatting for AI consumption
+
+### Iteration 5: Advanced Features & Polish
+Advanced analytics and optimization:
+
+**Phase 5.1: Advanced Analytics**
+1. `analyze_spending_trends` - Multi-month trend analysis
+2. `budget_health_check` - Budget optimization suggestions
+3. `category_insights` - Category performance analysis
+4. `transaction_patterns` - Spending pattern detection
+
+**Phase 5.2: Performance & Polish**
+1. Add caching for API responses
+2. Implement request batching
+3. Add comprehensive documentation
+4. Performance profiling and optimization
 
 ## Dependencies Management
 
