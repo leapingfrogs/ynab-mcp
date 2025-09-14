@@ -182,4 +182,55 @@ mod tests {
         // Should only include January transactions: -3000 + -2000 = -5000
         assert_eq!(spending, Money::from_milliunits(-5000));
     }
+
+    #[test]
+    fn should_exclude_transactions_without_dates_when_date_filtering() {
+        let category = Category::new("groceries".to_string(), "Groceries".to_string());
+        let transactions = vec![
+            Transaction::new_with_date(
+                "txn-1".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-3000),
+                "2024-01-15".to_string(),
+            ),
+            Transaction::new(
+                "txn-2".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-2000), // No date - should be excluded
+            ),
+        ];
+
+        let date_range = Some(crate::domain::DateRange::new(
+            "2024-01-01".to_string(),
+            "2024-01-31".to_string(),
+        ));
+
+        let spending = category.calculate_spending_with_date_filter(&transactions, date_range);
+
+        // Should only include transaction with date: -3000
+        assert_eq!(spending, Money::from_milliunits(-3000));
+    }
+
+    #[test]
+    fn should_include_all_transactions_when_no_date_filter() {
+        let category = Category::new("groceries".to_string(), "Groceries".to_string());
+        let transactions = vec![
+            Transaction::new_with_date(
+                "txn-1".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-3000),
+                "2024-01-15".to_string(),
+            ),
+            Transaction::new(
+                "txn-2".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-2000), // No date but should be included
+            ),
+        ];
+
+        let spending = category.calculate_spending_with_date_filter(&transactions, None);
+
+        // Should include all transactions: -3000 + -2000 = -5000
+        assert_eq!(spending, Money::from_milliunits(-5000));
+    }
 }
