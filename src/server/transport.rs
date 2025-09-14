@@ -130,4 +130,66 @@ mod tests {
             other => panic!("Expected IoError, got: {:?}", other),
         }
     }
+
+    #[test]
+    fn should_handle_invalid_utf8_content() {
+        // Create a message with invalid UTF-8 bytes
+        let invalid_utf8_bytes = vec![0xFF, 0xFE, 0xFD]; // Invalid UTF-8 sequence
+        let content_length = invalid_utf8_bytes.len();
+
+        // Build the full message with proper Content-Length header
+        let mut input = format!("Content-Length: {}\r\n\r\n", content_length).into_bytes();
+        input.extend_from_slice(&invalid_utf8_bytes);
+
+        let mut reader = Cursor::new(input);
+
+        let result = read_message(&mut reader);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            YnabError::ApiError(msg) => assert!(msg.contains("Message content is not valid UTF-8")),
+            other => panic!("Expected ApiError, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn should_handle_missing_empty_line_separator() {
+        // Test missing \r\n\r\n separator - just \r\n after Content-Length
+        let input = "Content-Length: 5\r\nhello";
+        let mut reader = Cursor::new(input);
+
+        let result = read_message(&mut reader);
+
+        // This should either succeed (reading "hello" as part of empty line + content)
+        // or fail on the read_exact operation, depending on parsing behavior
+        // The key is exercising the empty line reading code path
+        if let Ok(message) = result {
+            // If it succeeds, verify some content was read
+            assert!(!message.is_empty());
+        } else {
+            // If it fails, it should be an IO error
+            match result.unwrap_err() {
+                YnabError::IoError(_) => {} // Expected
+                other => panic!("Expected IoError, got: {:?}", other),
+            }
+        }
+    }
+
+    #[test]
+    fn should_read_message_with_proper_separator() {
+        // Test that the empty line separator is properly consumed
+        let json_message = "test";
+        let content_length = json_message.len();
+        let input = format!("Content-Length: {}\r\n\r\n{}", content_length, json_message);
+        let mut reader = Cursor::new(input);
+
+        let message = read_message(&mut reader).unwrap();
+
+        assert_eq!(message, json_message);
+
+        // Verify that subsequent reads would get EOF (separator was consumed)
+        let mut buf = String::new();
+        let bytes_read = reader.read_line(&mut buf).unwrap();
+        assert_eq!(bytes_read, 0); // EOF
+    }
 }

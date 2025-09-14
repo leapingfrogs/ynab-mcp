@@ -458,4 +458,105 @@ mod tests {
         assert_eq!(sorted[1].date(), Some("2024-01-20"));
         assert_eq!(sorted[2].date(), Some("2024-01-25"));
     }
+
+    #[test]
+    fn should_filter_transactions_by_max_amount() {
+        let transactions = vec![
+            Transaction::new(
+                "txn-1".to_string(),
+                "acc-test".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-5000), // Under limit
+            ),
+            Transaction::new(
+                "txn-2".to_string(),
+                "acc-test".to_string(),
+                "gas".to_string(),
+                Money::from_milliunits(-10000), // Over limit
+            ),
+            Transaction::new(
+                "txn-3".to_string(),
+                "acc-test".to_string(),
+                "salary".to_string(),
+                Money::from_milliunits(50000), // Positive, over limit
+            ),
+        ];
+
+        let query = TransactionQuery::new().with_max_amount(Money::from_milliunits(-3000));
+
+        let filtered = query.filter(&transactions);
+
+        // Should include transactions with amount <= -3000 (i.e., -5000 and -10000, but not 50000)
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().any(|t| t.amount().as_milliunits() == -5000));
+        assert!(
+            filtered
+                .iter()
+                .any(|t| t.amount().as_milliunits() == -10000)
+        );
+        assert!(!filtered.iter().any(|t| t.amount().as_milliunits() == 50000));
+    }
+
+    #[test]
+    fn should_handle_sorting_with_mixed_date_availability() {
+        let transactions = vec![
+            Transaction::new(
+                "txn-1".to_string(),
+                "acc-test".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-5000),
+            ), // No date
+            Transaction::new_with_date(
+                "txn-2".to_string(),
+                "acc-test".to_string(),
+                "gas".to_string(),
+                Money::from_milliunits(-3000),
+                "2024-01-20".to_string(),
+            ), // Has date
+            Transaction::new(
+                "txn-3".to_string(),
+                "acc-test".to_string(),
+                "salary".to_string(),
+                Money::from_milliunits(50000),
+            ), // No date
+        ];
+
+        let query = TransactionQuery::new().sort_by_date();
+
+        let sorted = query.filter(&transactions);
+
+        // Should be sorted: transactions with dates first, then those without
+        assert_eq!(sorted.len(), 3);
+        assert_eq!(sorted[0].date(), Some("2024-01-20")); // Transaction with date comes first
+        assert_eq!(sorted[1].date(), None); // Transactions without dates follow
+        assert_eq!(sorted[2].date(), None);
+    }
+
+    #[test]
+    fn should_apply_sorting_when_sort_by_is_set() {
+        let transactions = vec![
+            Transaction::new(
+                "txn-1".to_string(),
+                "acc-test".to_string(),
+                "groceries".to_string(),
+                Money::from_milliunits(-1000), // Smallest expense
+            ),
+            Transaction::new(
+                "txn-2".to_string(),
+                "acc-test".to_string(),
+                "gas".to_string(),
+                Money::from_milliunits(-5000), // Largest expense
+            ),
+        ];
+
+        // Test that sorting is applied (line 102 coverage)
+        let query = TransactionQuery::new().sort_by_amount_descending();
+
+        let sorted = query.filter(&transactions);
+
+        // Should be sorted by amount descending: -1000, -5000
+        assert_eq!(sorted.len(), 2);
+        assert_eq!(sorted[0].amount().as_milliunits(), -1000); // Closer to zero comes first
+        assert_eq!(sorted[1].amount().as_milliunits(), -5000);
+    }
 }
