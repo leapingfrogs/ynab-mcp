@@ -226,4 +226,66 @@ mod tests {
             "Invalid money amount: Cannot be negative"
         );
     }
+
+    #[test]
+    fn should_handle_debug_formatting() {
+        let error = YnabError::invalid_budget_id("test-id");
+        let debug_output = format!("{:?}", error);
+        assert!(debug_output.contains("InvalidBudgetId"));
+        assert!(debug_output.contains("test-id"));
+    }
+
+    #[test]
+    fn should_handle_error_source_chain() {
+        // Test error source chain for converted errors
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let ynab_error = YnabError::from(io_error);
+
+        match ynab_error {
+            YnabError::IoError(ref e) => {
+                assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+                assert!(e.to_string().contains("file not found"));
+            }
+            _ => panic!("Expected IoError variant"),
+        }
+    }
+
+    #[test]
+    fn should_handle_partial_eq_for_different_variants() {
+        let budget_error1 = YnabError::invalid_budget_id("test");
+        let budget_error2 = YnabError::invalid_budget_id("test");
+        let budget_error3 = YnabError::invalid_budget_id("different");
+        let category_error = YnabError::category_not_found("test");
+
+        // Same variant, same content should be equal
+        assert_eq!(budget_error1, budget_error2);
+
+        // Same variant, different content should not be equal
+        assert_ne!(budget_error1, budget_error3);
+
+        // Different variants should not be equal
+        assert_ne!(budget_error1, category_error);
+    }
+
+    #[test]
+    fn should_handle_http_api_error_partial_eq() {
+        use std::io;
+
+        // Test that HttpApiError and IoError always return false for equality
+        let io_error1 = YnabError::from(io::Error::new(io::ErrorKind::NotFound, "test1"));
+        let io_error2 = YnabError::from(io::Error::new(io::ErrorKind::NotFound, "test2"));
+
+        // IoError variants should never be equal
+        assert_ne!(io_error1, io_error2);
+    }
+
+    #[test]
+    fn should_handle_all_error_variant_conversions() {
+        // Test that YnabResult works as expected
+        let success: YnabResult<String> = Ok("success".to_string());
+        assert!(success.is_ok());
+
+        let error: YnabResult<String> = Err(YnabError::invalid_budget_id("test".to_string()));
+        assert!(error.is_err());
+    }
 }

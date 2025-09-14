@@ -138,4 +138,81 @@ mod tests {
         assert!(output.contains("Server error"));
         assert!(output.contains("-32000"));
     }
+
+    #[test]
+    fn should_handle_successful_request_processing() {
+        // Test a valid tools/list request
+        let valid_request = r#"{"jsonrpc":"2.0","method":"tools/list","id":1}"#;
+        let input = format!(
+            "Content-Length: {}\r\n\r\n{}",
+            valid_request.len(),
+            valid_request
+        );
+        let mut stdin = Cursor::new(input);
+        let mut stdout = Vec::new();
+
+        run_mcp_server(&mut stdin, &mut stdout, "test-token").unwrap();
+
+        let output = String::from_utf8(stdout).unwrap();
+        assert!(output.contains("Content-Length:"));
+        assert!(output.contains("tools"));
+        // Should be a successful response, not an error
+        assert!(!output.contains("-32000"));
+        assert!(!output.contains("-32700"));
+    }
+
+    #[test]
+    fn should_handle_request_with_write_error() {
+        use std::io;
+
+        // Create a mock writer that always fails
+        struct FailingWriter;
+        impl Write for FailingWriter {
+            fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+                Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "Mock write failure",
+                ))
+            }
+            fn flush(&mut self) -> io::Result<()> {
+                Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "Mock flush failure",
+                ))
+            }
+        }
+
+        let valid_request = r#"{"jsonrpc":"2.0","method":"tools/list","id":1}"#;
+        let input = format!(
+            "Content-Length: {}\r\n\r\n{}",
+            valid_request.len(),
+            valid_request
+        );
+        let mut stdin = Cursor::new(input);
+        let mut failing_writer = FailingWriter;
+
+        let result = run_mcp_server(&mut stdin, &mut failing_writer, "test-token");
+        // Should return an error when write fails
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_handle_request_id_in_error_response() {
+        // Test that request ID is preserved in error responses
+        let invalid_request = r#"{"jsonrpc":"2.0","method":"invalid_method","id":42}"#;
+        let input = format!(
+            "Content-Length: {}\r\n\r\n{}",
+            invalid_request.len(),
+            invalid_request
+        );
+        let mut stdin = Cursor::new(input);
+        let mut stdout = Vec::new();
+
+        run_mcp_server(&mut stdin, &mut stdout, "test-token").unwrap();
+
+        let output = String::from_utf8(stdout).unwrap();
+        assert!(output.contains("Content-Length:"));
+        // Should preserve the request ID in error response
+        assert!(output.contains("42"));
+    }
 }

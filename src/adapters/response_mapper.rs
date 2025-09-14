@@ -294,4 +294,32 @@ mod tests {
             panic!("Expected ApiError");
         }
     }
+
+    #[test]
+    fn should_support_default_trait() {
+        let mapper: ResponseMapper = Default::default();
+
+        // Should behave the same as new()
+        let json = json!({
+            "id": "test-123",
+            "name": "Test Budget"
+        });
+
+        let budget = mapper.map_budget(&json).unwrap();
+        assert_eq!(budget.id(), "test-123");
+        assert_eq!(budget.name(), "Test Budget");
+    }
+
+    #[test]
+    fn should_handle_null_values_in_budget() {
+        let mapper = ResponseMapper::new();
+        let json = json!({
+            "id": null,
+            "name": null
+        });
+
+        let budget = mapper.map_budget(&json).unwrap();
+        assert_eq!(budget.id(), "");
+        assert_eq!(budget.name(), "");
+    }
 }

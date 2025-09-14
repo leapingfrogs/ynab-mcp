@@ -252,4 +252,18 @@ mod tests {
         cache.clear();
         assert_eq!(cache.size(), 0);
     }
+
+    #[test]
+    fn should_support_default_trait() {
+        let cache: ApiResponseCache = Default::default();
+        assert_eq!(cache.size(), 0);
+    }
+
+    #[test]
+    fn should_handle_cache_entry_debug_format() {
+        let entry = CacheEntry::new(json!({"test": "data"}), Duration::from_secs(60));
+        let debug_str = format!("{:?}", entry);
+        assert!(debug_str.contains("CacheEntry"));
+        assert!(debug_str.contains("test"));
+    }
 }

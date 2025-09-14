@@ -75,24 +75,24 @@ cargo clippy --all-targets --all-features -- -D warnings
 # Run all tests
 cargo test
 
-# Check test coverage (MUST be ≥90%)
+# Check test coverage (MUST be ≥95%)
 cargo tarpaulin --out Html
-# Review tarpaulin-report.html and ensure coverage ≥90%
-# If coverage is below 90%, write additional tests before committing
+# Review tarpaulin-report.html and ensure coverage ≥95%
+# If coverage is below 95%, write additional tests before committing
 
 # Check documentation
 cargo doc --no-deps --document-private-items
 
-# If all pass AND coverage ≥90%, commit
+# If all pass AND coverage ≥95%, commit
 git add -A && git commit
 ```
 
 ### Code Coverage Requirements
 
-- **Minimum coverage: 90%**
+- **Minimum coverage: 95%**
 - Coverage is checked using `cargo tarpaulin`
 - HTML reports generated in `tarpaulin-report.html`
-- **DO NOT commit if coverage falls below 90%**
+- **DO NOT commit if coverage falls below 95%**
 - Focus on testing business logic in the `domain` module
 - Server handlers and adapters should also maintain high coverage
 - Main.rs and simple constructors may have lower coverage if justified
