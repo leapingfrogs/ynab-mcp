@@ -39,5 +39,36 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Generate test coverage
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: cobertura.xml
+        fail_ci_if_error: false
+
+    - name: Check coverage threshold
+      run: |
+        cargo tarpaulin --out Json --output-dir .
+        python3 -c "
+        import json
+        import sys
+        with open('tarpaulin-report.json', 'r') as f:
+            data = json.load(f)
+        coverage = data['coverage']
+        threshold = 90
+        print(f'Coverage: {coverage:.2f}%')
+        if coverage < threshold:
+            print(f'❌ Coverage {coverage:.2f}% is below required {threshold}%')
+            print('Current coverage report available in tarpaulin-report.json')
+            sys.exit(1)
+        else:
+            print(f'✅ Coverage {coverage:.2f}% meets minimum requirement of {threshold}%')
+        "
+
     - name: Check documentation
       run: cargo doc --no-deps --document-private-items

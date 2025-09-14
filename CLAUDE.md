@@ -75,12 +75,27 @@ cargo clippy --all-targets --all-features -- -D warnings
 # Run all tests
 cargo test
 
+# Check test coverage (MUST be ≥90%)
+cargo tarpaulin --out Html
+# Review tarpaulin-report.html and ensure coverage ≥90%
+# If coverage is below 90%, write additional tests before committing
+
 # Check documentation
 cargo doc --no-deps --document-private-items
 
-# If all pass, commit
+# If all pass AND coverage ≥90%, commit
 git add -A && git commit
 ```
+
+### Code Coverage Requirements
+
+- **Minimum coverage: 90%**
+- Coverage is checked using `cargo tarpaulin`
+- HTML reports generated in `tarpaulin-report.html`
+- **DO NOT commit if coverage falls below 90%**
+- Focus on testing business logic in the `domain` module
+- Server handlers and adapters should also maintain high coverage
+- Main.rs and simple constructors may have lower coverage if justified
 
 ## Code Style Guidelines
 
@@ -255,8 +270,14 @@ cargo test test_name -- --nocapture
 # Run tests in watch mode
 cargo watch -x test
 
-# Check test coverage
-cargo llvm-cov --html
+# Check test coverage (HTML report)
+cargo tarpaulin --out Html
+
+# Check test coverage (terminal output)
+cargo tarpaulin
+
+# Check test coverage with exclusions
+cargo tarpaulin --exclude-files src/main.rs --exclude-files src/adapters/ynab_client.rs
 
 # Run benchmarks
 cargo bench
