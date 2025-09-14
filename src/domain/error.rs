@@ -35,6 +35,10 @@ pub enum YnabError {
     #[error("API request failed: {0}")]
     HttpApiError(#[from] reqwest::Error),
 
+    /// IO operation failed.
+    #[error("IO operation failed: {0}")]
+    IoError(#[from] std::io::Error),
+
     /// Generic API error with custom message.
     #[error("API request failed: {0}")]
     ApiError(String),
@@ -51,8 +55,9 @@ impl PartialEq for YnabError {
             (YnabError::InvalidAmount(a), YnabError::InvalidAmount(b)) => a == b,
             (YnabError::InvalidDate(a), YnabError::InvalidDate(b)) => a == b,
             (YnabError::ApiError(a), YnabError::ApiError(b)) => a == b,
-            // HttpApiError cannot be compared due to reqwest::Error
+            // HttpApiError and IoError cannot be compared due to external error types
             (YnabError::HttpApiError(_), YnabError::HttpApiError(_)) => false,
+            (YnabError::IoError(_), YnabError::IoError(_)) => false,
             _ => false,
         }
     }
