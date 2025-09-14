@@ -1,13 +1,16 @@
 //! YNAB API client for making HTTP requests to the YNAB API.
 
+use crate::adapters::cache::ApiResponseCache;
 use crate::domain::{YnabError, YnabResult};
+use std::sync::{Arc, Mutex};
 
-/// YNAB API client with authentication and HTTP capabilities.
-#[derive(Debug, Clone)]
+/// YNAB API client with authentication, HTTP capabilities, and caching.
+#[derive(Debug)]
 pub struct YnabClient {
     api_token: String,
     base_url: String,
     client: reqwest::Client,
+    cache: Arc<Mutex<ApiResponseCache>>,
 }
 
 impl YnabClient {
@@ -25,6 +28,7 @@ impl YnabClient {
             api_token,
             base_url: "https://api.ynab.com/v1".to_string(),
             client: reqwest::Client::new(),
+            cache: Arc::new(Mutex::new(ApiResponseCache::new())),
         }
     }
 
@@ -45,6 +49,7 @@ impl YnabClient {
             api_token,
             base_url,
             client: reqwest::Client::new(),
+            cache: Arc::new(Mutex::new(ApiResponseCache::new())),
         }
     }
 
@@ -82,6 +87,14 @@ impl YnabClient {
     /// # }
     /// ```
     pub async fn get_json(&self, path: &str) -> YnabResult<serde_json::Value> {
+        // Check cache first
+        if let Ok(mut cache) = self.cache.lock()
+            && let Some(cached_data) = cache.get(path)
+        {
+            return Ok(cached_data);
+        }
+
+        // Cache miss - make HTTP request
         let url = format!("{}{}", self.base_url, path);
 
         let response = self
@@ -100,6 +113,12 @@ impl YnabClient {
         }
 
         let json = response.json::<serde_json::Value>().await?;
+
+        // Store in cache
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.set(path, json.clone());
+        }
+
         Ok(json)
     }
 
@@ -157,6 +176,122 @@ impl YnabClient {
     pub async fn get_transactions(&self, budget_id: &str) -> YnabResult<serde_json::Value> {
         let path = format!("/budgets/{}/transactions", budget_id);
         self.get_json(&path).await
+    }
+
+    /// Clears all cached API responses.
+    ///
+    /// This is useful for testing or when you want to ensure fresh data.
+    pub fn clear_cache(&self) {
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.clear();
+        }
+    }
+
+    /// Returns the number of cached API responses.
+    pub fn cache_size(&self) -> usize {
+        if let Ok(cache) = self.cache.lock() {
+            cache.size()
+        } else {
+            0
+        }
+    }
+
+    /// Removes expired entries from the cache.
+    pub fn cleanup_cache(&self) {
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.cleanup_expired();
+        }
+    }
+
+    /// Executes multiple API requests concurrently for better performance.
+    ///
+    /// This method batches multiple requests and executes them concurrently,
+    /// which can significantly improve performance when fetching multiple
+    /// resources from the YNAB API.
+    ///
+    /// # Arguments
+    /// * `paths` - A vector of API paths to request
+    ///
+    /// # Returns
+    /// A vector of results in the same order as the input paths.
+    /// Each result contains either the JSON response or an error.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::YnabClient;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YnabClient::new("your-api-token".to_string());
+    /// let paths = vec!["/budgets", "/budgets/123/categories", "/budgets/123/transactions"];
+    /// let results = client.batch_requests(paths).await;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn batch_requests(&self, paths: Vec<&str>) -> Vec<YnabResult<serde_json::Value>> {
+        use futures::future::join_all;
+
+        // Create a vector of futures for all requests
+        let futures: Vec<_> = paths.into_iter().map(|path| self.get_json(path)).collect();
+
+        // Execute all requests concurrently
+        join_all(futures).await
+    }
+
+    /// Batch request for multiple budget data types.
+    ///
+    /// This is a convenience method that fetches common budget data
+    /// (overview, categories, and transactions) in a single batch request.
+    ///
+    /// # Arguments
+    /// * `budget_id` - The budget ID to fetch data for
+    ///
+    /// # Returns
+    /// A tuple containing (budget_overview, categories, transactions) results.
+    pub async fn get_budget_batch(
+        &self,
+        budget_id: &str,
+    ) -> (
+        YnabResult<serde_json::Value>,
+        YnabResult<serde_json::Value>,
+        YnabResult<serde_json::Value>,
+    ) {
+        let paths = [
+            format!("/budgets/{}", budget_id),
+            format!("/budgets/{}/categories", budget_id),
+            format!("/budgets/{}/transactions", budget_id),
+        ];
+
+        let path_refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        let results = self.batch_requests(path_refs).await;
+
+        // Extract results using iterator
+        let mut iter = results.into_iter();
+        let budget_result = iter
+            .next()
+            .unwrap_or_else(|| Err(YnabError::api_error("Missing budget result".to_string())));
+        let categories_result = iter.next().unwrap_or_else(|| {
+            Err(YnabError::api_error(
+                "Missing categories result".to_string(),
+            ))
+        });
+        let transactions_result = iter.next().unwrap_or_else(|| {
+            Err(YnabError::api_error(
+                "Missing transactions result".to_string(),
+            ))
+        });
+
+        (budget_result, categories_result, transactions_result)
+    }
+}
+
+impl Clone for YnabClient {
+    fn clone(&self) -> Self {
+        Self {
+            api_token: self.api_token.clone(),
+            base_url: self.base_url.clone(),
+            client: self.client.clone(),
+            cache: Arc::clone(&self.cache),
+        }
     }
 }
 
@@ -288,6 +423,88 @@ mod tests {
 
         match result.unwrap_err() {
             YnabError::HttpApiError(_) => {} // Expected - network error
+            other => panic!("Expected HttpApiError, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn should_have_empty_cache_on_creation() {
+        let client = YnabClient::new("test-token".to_string());
+        assert_eq!(client.cache_size(), 0);
+    }
+
+    #[test]
+    fn should_clear_cache() {
+        let client = YnabClient::new("test-token".to_string());
+
+        // Manually add something to cache to test clearing
+        if let Ok(mut cache) = client.cache.lock() {
+            cache.set("/test", serde_json::json!({"test": "data"}));
+        }
+
+        assert_eq!(client.cache_size(), 1);
+        client.clear_cache();
+        assert_eq!(client.cache_size(), 0);
+    }
+
+    #[test]
+    fn should_share_cache_between_clones() {
+        let client1 = YnabClient::new("test-token".to_string());
+        let client2 = client1.clone();
+
+        // Add to cache via client1
+        if let Ok(mut cache) = client1.cache.lock() {
+            cache.set("/shared", serde_json::json!({"shared": "data"}));
+        }
+
+        // Should be visible via client2
+        assert_eq!(client2.cache_size(), 1);
+
+        client2.clear_cache();
+        assert_eq!(client1.cache_size(), 0); // Should affect both
+    }
+
+    #[tokio::test]
+    async fn should_batch_multiple_requests() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        let paths = vec!["/budgets", "/budgets/123/categories"];
+        let results = client.batch_requests(paths).await;
+
+        // Should get 2 results (both will be network errors for fake URLs)
+        assert_eq!(results.len(), 2);
+
+        // Both should be errors since we're using fake URLs
+        for result in results {
+            assert!(result.is_err());
+            match result.unwrap_err() {
+                YnabError::HttpApiError(_) => {} // Expected - network error
+                other => panic!("Expected HttpApiError, got: {:?}", other),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn should_get_budget_batch() {
+        let client = YnabClient::new_with_base_url(
+            "test-api-token".to_string(),
+            "https://test-api.example.com/v1".to_string(),
+        );
+
+        let (budget_result, categories_result, transactions_result) =
+            client.get_budget_batch("test-budget-123").await;
+
+        // All should be errors since we're using fake URLs
+        assert!(budget_result.is_err());
+        assert!(categories_result.is_err());
+        assert!(transactions_result.is_err());
+
+        // Verify they're the expected error types
+        match budget_result.unwrap_err() {
+            YnabError::HttpApiError(_) => {} // Expected
             other => panic!("Expected HttpApiError, got: {:?}", other),
         }
     }
