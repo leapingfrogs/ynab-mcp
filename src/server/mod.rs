@@ -5,6 +5,8 @@
 
 pub mod handler;
 pub mod jsonrpc;
+pub mod mcp_protocol;
 
 pub use handler::*;
 pub use jsonrpc::*;
+pub use mcp_protocol::*;
