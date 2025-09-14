@@ -1,13 +1,17 @@
 //! Integration tests for the complete MCP server runtime.
 
 use std::io::Cursor;
-use ynab_mcp::server::{run_mcp_server};
+use ynab_mcp::server::run_mcp_server;
 
 #[test]
 fn should_run_complete_mcp_server_session() {
     // Test 1: Initialize request
     let init_message = r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05"}}"#;
-    let input = format!("Content-Length: {}\r\n\r\n{}", init_message.len(), init_message);
+    let input = format!(
+        "Content-Length: {}\r\n\r\n{}",
+        init_message.len(),
+        init_message
+    );
 
     let mut stdin = Cursor::new(input);
     let mut stdout = Vec::new();
@@ -29,7 +33,11 @@ fn should_run_complete_mcp_server_session() {
 fn should_handle_tools_list_request() {
     // Test 2: Tools list request
     let tools_message = r#"{"jsonrpc":"2.0","method":"tools/list","id":2}"#;
-    let input = format!("Content-Length: {}\r\n\r\n{}", tools_message.len(), tools_message);
+    let input = format!(
+        "Content-Length: {}\r\n\r\n{}",
+        tools_message.len(),
+        tools_message
+    );
 
     let mut stdin = Cursor::new(input);
     let mut stdout = Vec::new();
@@ -53,7 +61,11 @@ fn should_handle_tools_list_request() {
 fn should_handle_tools_call_request() {
     // Test 3: Tools call request
     let call_message = r#"{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"analyze_category_spending","arguments":{"budget_id":"test-budget","category_name":"Groceries"}}}"#;
-    let input = format!("Content-Length: {}\r\n\r\n{}", call_message.len(), call_message);
+    let input = format!(
+        "Content-Length: {}\r\n\r\n{}",
+        call_message.len(),
+        call_message
+    );
 
     let mut stdin = Cursor::new(input);
     let mut stdout = Vec::new();

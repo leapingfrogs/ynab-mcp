@@ -18,7 +18,7 @@ impl McpServer {
 
     /// Handles an MCP request and returns an appropriate response.
     pub fn handle_request(&self, request: JsonRpcRequest) -> YnabResult<JsonRpcResponse> {
-        let id = request.id.clone().unwrap_or_else(|| json!(null));
+        let id = request.id.clone().unwrap_or(json!(null));
 
         match request.method.as_str() {
             "initialize" => self.handle_initialize(id, request.params),
@@ -34,7 +34,11 @@ impl McpServer {
     }
 
     /// Handles the initialize method.
-    fn handle_initialize(&self, id: serde_json::Value, params: Option<serde_json::Value>) -> YnabResult<JsonRpcResponse> {
+    fn handle_initialize(
+        &self,
+        id: serde_json::Value,
+        params: Option<serde_json::Value>,
+    ) -> YnabResult<JsonRpcResponse> {
         // Extract protocol version from params
         let _params = params.unwrap_or_else(|| json!({}));
 
@@ -74,7 +78,11 @@ impl McpServer {
     }
 
     /// Handles the tools/call method.
-    fn handle_tools_call(&self, id: serde_json::Value, params: Option<serde_json::Value>) -> YnabResult<JsonRpcResponse> {
+    fn handle_tools_call(
+        &self,
+        id: serde_json::Value,
+        params: Option<serde_json::Value>,
+    ) -> YnabResult<JsonRpcResponse> {
         let params = params.ok_or_else(|| {
             crate::domain::YnabError::api_error("Missing params for tools/call".to_string())
         })?;
@@ -110,15 +118,16 @@ impl McpServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::jsonrpc::JsonRpcRequest;
     use crate::server::handler::Handler;
+    use crate::server::jsonrpc::JsonRpcRequest;
     use serde_json::json;
 
     #[test]
     fn should_handle_initialize_request() {
         let handler = Handler::new();
         let mcp_server = McpServer::new(handler);
-        let request = JsonRpcRequest::from_json(r#"{
+        let request = JsonRpcRequest::from_json(
+            r#"{
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
@@ -126,7 +135,9 @@ mod tests {
                 "protocolVersion": "2024-11-05",
                 "clientInfo": {"name": "test-client"}
             }
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let response = mcp_server.handle_request(request).unwrap();
 
@@ -150,12 +161,15 @@ mod tests {
         let handler = Handler::with_full_integration(transaction_service, ynab_client);
         let mcp_server = McpServer::new(handler);
 
-        let request = JsonRpcRequest::from_json(r#"{
+        let request = JsonRpcRequest::from_json(
+            r#"{
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/list",
             "params": {}
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let response = mcp_server.handle_request(request).unwrap();
 
@@ -183,7 +197,8 @@ mod tests {
         let handler = Handler::with_full_integration(transaction_service, ynab_client);
         let mcp_server = McpServer::new(handler);
 
-        let request = JsonRpcRequest::from_json(r#"{
+        let request = JsonRpcRequest::from_json(
+            r#"{
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
@@ -194,7 +209,9 @@ mod tests {
                     "category_name": "Groceries"
                 }
             }
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let response = mcp_server.handle_request(request).unwrap();
 
@@ -218,12 +235,15 @@ mod tests {
         let handler = Handler::new();
         let mcp_server = McpServer::new(handler);
 
-        let request = JsonRpcRequest::from_json(r#"{
+        let request = JsonRpcRequest::from_json(
+            r#"{
             "jsonrpc": "2.0",
             "id": 4,
             "method": "unknown/method",
             "params": {}
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let response = mcp_server.handle_request(request).unwrap();
 
@@ -246,7 +266,8 @@ mod tests {
         let handler = Handler::with_full_integration(transaction_service, ynab_client);
         let mcp_server = McpServer::new(handler);
 
-        let request = JsonRpcRequest::from_json(r#"{
+        let request = JsonRpcRequest::from_json(
+            r#"{
             "jsonrpc": "2.0",
             "id": 5,
             "method": "tools/call",
@@ -254,7 +275,9 @@ mod tests {
                 "name": "nonexistent_tool",
                 "arguments": {}
             }
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let response = mcp_server.handle_request(request).unwrap();
 

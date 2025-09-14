@@ -1,7 +1,7 @@
 //! YNAB MCP Server binary entry point.
 
-use std::io::{stdin, stdout};
 use std::env;
+use std::io::{stdin, stdout};
 use ynab_mcp::server::run_mcp_server;
 
 fn main() {

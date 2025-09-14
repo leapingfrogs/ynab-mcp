@@ -70,13 +70,12 @@ pub fn run_mcp_server<R: Read, W: Write>(
             Ok(resp) => resp,
             Err(e) => {
                 // Send error response for MCP handling failure
-                let error_response = JsonRpcResponse::error(
+                JsonRpcResponse::error(
                     serde_json::Value::Null,
                     -32000,
                     format!("Server error: {}", e),
                     None,
-                );
-                error_response
+                )
             }
         };
 

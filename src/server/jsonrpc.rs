@@ -18,16 +18,26 @@ impl JsonRpcRequest {
         let value: Value = serde_json::from_str(json)
             .map_err(|e| YnabError::api_error(format!("Invalid JSON: {}", e)))?;
 
-        let jsonrpc = value["jsonrpc"].as_str()
+        let jsonrpc = value["jsonrpc"]
+            .as_str()
             .ok_or_else(|| YnabError::api_error("Missing jsonrpc field".to_string()))?
             .to_string();
 
-        let method = value["method"].as_str()
+        let method = value["method"]
+            .as_str()
             .ok_or_else(|| YnabError::api_error("Missing method field".to_string()))?
             .to_string();
 
-        let id = if value["id"].is_null() { None } else { Some(value["id"].clone()) };
-        let params = if value["params"].is_null() { None } else { Some(value["params"].clone()) };
+        let id = if value["id"].is_null() {
+            None
+        } else {
+            Some(value["id"].clone())
+        };
+        let params = if value["params"].is_null() {
+            None
+        } else {
+            Some(value["params"].clone())
+        };
 
         Ok(JsonRpcRequest {
             jsonrpc,
@@ -72,7 +82,11 @@ impl JsonRpcResponse {
             jsonrpc: "2.0".to_string(),
             id: id.into(),
             result: None,
-            error: Some(JsonRpcError { code, message, data }),
+            error: Some(JsonRpcError {
+                code,
+                message,
+                data,
+            }),
         }
     }
 
@@ -167,7 +181,7 @@ mod tests {
             "test-id",
             -32600,
             "Invalid Request".to_string(),
-            Some(json!({"details": "Missing required field"}))
+            Some(json!({"details": "Missing required field"})),
         );
         let json = response.to_json();
 

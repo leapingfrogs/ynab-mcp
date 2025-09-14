@@ -39,9 +39,8 @@ pub fn read_message<R: Read>(reader: R) -> YnabResult<String> {
     let mut buffer = vec![0; content_length];
     buf_reader.read_exact(&mut buffer)?;
 
-    let message = String::from_utf8(buffer).map_err(|_| {
-        YnabError::api_error("Message content is not valid UTF-8".to_string())
-    })?;
+    let message = String::from_utf8(buffer)
+        .map_err(|_| YnabError::api_error("Message content is not valid UTF-8".to_string()))?;
 
     Ok(message)
 }
@@ -127,7 +126,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            YnabError::IoError(_) => {}, // Expected - EOF before reading full content
+            YnabError::IoError(_) => {} // Expected - EOF before reading full content
             other => panic!("Expected IoError, got: {:?}", other),
         }
     }
