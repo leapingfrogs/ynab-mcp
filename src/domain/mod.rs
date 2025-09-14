@@ -8,9 +8,13 @@ pub mod category;
 pub mod date_range;
 pub mod money;
 pub mod transaction;
+pub mod transaction_query;
+pub mod transaction_service;
 
 pub use budget::*;
 pub use category::*;
 pub use date_range::*;
 pub use money::*;
 pub use transaction::*;
+pub use transaction_query::*;
+pub use transaction_service::*;

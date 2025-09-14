@@ -9,6 +9,7 @@ pub struct Transaction {
     category_id: String,
     amount: Money,
     date: Option<String>,
+    description: Option<String>,
 }
 
 impl Transaction {
@@ -32,6 +33,7 @@ impl Transaction {
             category_id,
             amount,
             date: None,
+            description: None,
         }
     }
 
@@ -55,6 +57,36 @@ impl Transaction {
             category_id,
             amount,
             date: Some(date),
+            description: None,
+        }
+    }
+
+    /// Creates a new Transaction with a description.
+    ///
+    /// # Example
+    /// ```
+    /// use ynab_mcp::{Transaction, Money};
+    ///
+    /// let transaction = Transaction::new_with_description(
+    ///     "txn-123".to_string(),
+    ///     "groceries".to_string(),
+    ///     Money::from_milliunits(-5000),
+    ///     "Whole Foods Market".to_string(),
+    /// );
+    /// assert_eq!(transaction.description(), Some("Whole Foods Market"));
+    /// ```
+    pub fn new_with_description(
+        id: String,
+        category_id: String,
+        amount: Money,
+        description: String,
+    ) -> Self {
+        Self {
+            id,
+            category_id,
+            amount,
+            date: None,
+            description: Some(description),
         }
     }
 
@@ -76,6 +108,11 @@ impl Transaction {
     /// Returns the transaction date if available.
     pub fn date(&self) -> Option<&str> {
         self.date.as_deref()
+    }
+
+    /// Returns the transaction description if available.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 }
 
