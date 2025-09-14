@@ -2,5 +2,12 @@
 name = "ynab-mcp"
 version = "0.1.0"
 edition = "2024"
+authors = ["YNAB MCP Server Contributors"]
+description = "MCP server for read-only YNAB budget data access"
+license = "MIT"
 
 [dependencies]
+
+[dev-dependencies]
+# Testing framework
+# (Additional dev dependencies will be added when tests require them following TDD)
