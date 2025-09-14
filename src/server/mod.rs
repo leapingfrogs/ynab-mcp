@@ -86,3 +86,56 @@ pub fn run_mcp_server<R: Read, W: Write>(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn should_handle_malformed_json_in_server_loop() {
+        let malformed_input = "Content-Length: 15\r\n\r\n{\"invalid\":json";
+        let mut stdin = Cursor::new(malformed_input);
+        let mut stdout = Vec::new();
+
+        run_mcp_server(&mut stdin, &mut stdout, "test-token").unwrap();
+
+        let output = String::from_utf8(stdout).unwrap();
+        assert!(output.contains("Content-Length:"));
+        assert!(output.contains("Parse error"));
+        assert!(output.contains("-32700"));
+    }
+
+    #[test]
+    fn should_handle_empty_input_gracefully() {
+        let empty_input = "";
+        let mut stdin = Cursor::new(empty_input);
+        let mut stdout = Vec::new();
+
+        let result = run_mcp_server(&mut stdin, &mut stdout, "test-token");
+        assert!(result.is_ok());
+
+        let output = String::from_utf8(stdout).unwrap();
+        assert!(output.is_empty()); // No input, no output
+    }
+
+    #[test]
+    fn should_handle_server_error_during_request_processing() {
+        // Test malformed MCP request that causes server error
+        let invalid_mcp_request = r#"{"jsonrpc":"2.0","method":"tools/call","id":1}"#; // Missing params
+        let input = format!(
+            "Content-Length: {}\r\n\r\n{}",
+            invalid_mcp_request.len(),
+            invalid_mcp_request
+        );
+        let mut stdin = Cursor::new(input);
+        let mut stdout = Vec::new();
+
+        run_mcp_server(&mut stdin, &mut stdout, "test-token").unwrap();
+
+        let output = String::from_utf8(stdout).unwrap();
+        assert!(output.contains("Content-Length:"));
+        assert!(output.contains("Server error"));
+        assert!(output.contains("-32000"));
+    }
+}

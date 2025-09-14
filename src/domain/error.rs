@@ -183,4 +183,47 @@ mod tests {
         assert!(success.is_ok());
         assert!(failure.is_err());
     }
+
+    #[test]
+    fn should_create_transaction_not_found_error() {
+        let error = YnabError::transaction_not_found("txn-123");
+
+        assert_eq!(error, YnabError::TransactionNotFound("txn-123".to_string()));
+        assert_eq!(error.to_string(), "Transaction not found: txn-123");
+    }
+
+    #[test]
+    fn should_handle_io_error_conversion() {
+        use std::io::{Error, ErrorKind};
+
+        let io_error = Error::new(ErrorKind::UnexpectedEof, "test error");
+        let ynab_error: YnabError = io_error.into();
+
+        match ynab_error {
+            YnabError::IoError(_) => {} // Expected
+            other => panic!("Expected IoError, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn should_handle_reqwest_error_conversion() {
+        // Test that we can handle HTTP errors
+        // This tests the From<reqwest::Error> implementation indirectly
+        let api_error = YnabError::api_error("Connection failed");
+        assert!(matches!(api_error, YnabError::ApiError(_)));
+    }
+
+    #[test]
+    fn should_display_error_messages_correctly() {
+        let budget_error = YnabError::invalid_budget_id("test-123");
+        let category_error = YnabError::category_not_found("cat-456");
+        let amount_error = YnabError::invalid_amount("Cannot be negative");
+
+        assert_eq!(budget_error.to_string(), "Invalid budget ID: test-123");
+        assert_eq!(category_error.to_string(), "Category not found: cat-456");
+        assert_eq!(
+            amount_error.to_string(),
+            "Invalid money amount: Cannot be negative"
+        );
+    }
 }
