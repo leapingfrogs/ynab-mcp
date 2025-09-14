@@ -29,6 +29,23 @@ impl Money {
     }
 }
 
+use std::iter::Sum;
+use std::ops::Add;
+
+impl Add for Money {
+    type Output = Money;
+
+    fn add(self, other: Money) -> Money {
+        Money::from_milliunits(self.milliunits + other.milliunits)
+    }
+}
+
+impl Sum for Money {
+    fn sum<I: Iterator<Item = Money>>(iter: I) -> Self {
+        iter.fold(Money::from_milliunits(0), |a, b| a + b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
