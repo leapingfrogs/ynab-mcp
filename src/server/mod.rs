@@ -4,5 +4,7 @@
 //! including request handlers and server setup.
 
 pub mod handler;
+pub mod jsonrpc;
 
 pub use handler::*;
+pub use jsonrpc::*;
