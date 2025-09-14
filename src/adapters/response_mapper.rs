@@ -1,6 +1,6 @@
 //! Response mapper for converting YNAB API JSON responses to domain entities.
 
-use crate::domain::{Budget, Category, Money, Transaction, YnabResult};
+use crate::domain::{Budget, Category, Money, Transaction, YnabError, YnabResult};
 use serde_json::Value;
 
 /// Maps YNAB API responses to domain entities.
@@ -112,6 +112,47 @@ impl ResponseMapper {
 
         Ok(builder.build())
     }
+
+    /// Maps a YNAB transactions API response to a vector of Transaction domain entities.
+    ///
+    /// # Arguments
+    /// * `json` - The JSON response from the YNAB transactions API
+    ///
+    /// # Example
+    /// ```no_run
+    /// use ynab_mcp::adapters::ResponseMapper;
+    /// use serde_json::json;
+    ///
+    /// let mapper = ResponseMapper::new();
+    /// let response = json!({
+    ///     "data": {
+    ///         "transactions": [
+    ///             {
+    ///                 "id": "trans-123",
+    ///                 "account_id": "acc-456",
+    ///                 "category_id": "cat-789",
+    ///                 "amount": -25000,
+    ///                 "date": "2024-01-15"
+    ///             }
+    ///         ]
+    ///     }
+    /// });
+    /// let transactions = mapper.map_transactions_from_response(&response).unwrap();
+    /// assert_eq!(transactions.len(), 1);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn map_transactions_from_response(&self, json: &Value) -> YnabResult<Vec<Transaction>> {
+        let transactions_array = json["data"]["transactions"].as_array().ok_or_else(|| {
+            YnabError::ApiError("Invalid transactions response format".to_string())
+        })?;
+
+        let mut transactions = Vec::new();
+        for transaction_json in transactions_array {
+            transactions.push(self.map_transaction(transaction_json)?);
+        }
+
+        Ok(transactions)
+    }
 }
 
 impl Default for ResponseMapper {
@@ -199,5 +240,58 @@ mod tests {
         assert_eq!(transaction.amount(), Money::from_milliunits(-50000));
         assert_eq!(transaction.date(), Some("2024-01-15"));
         assert_eq!(transaction.description(), Some("Grocery shopping"));
+    }
+
+    #[test]
+    fn should_map_multiple_transactions_from_api_response() {
+        let mapper = ResponseMapper::new();
+        let json = json!({
+            "data": {
+                "transactions": [
+                    {
+                        "id": "trans-1",
+                        "account_id": "account-123",
+                        "category_id": "category-456",
+                        "amount": -25000,
+                        "date": "2024-01-15",
+                        "memo": "Grocery store"
+                    },
+                    {
+                        "id": "trans-2",
+                        "account_id": "account-456",
+                        "category_id": "category-789",
+                        "amount": -15000,
+                        "date": "2024-01-16"
+                    }
+                ]
+            }
+        });
+
+        let transactions = mapper.map_transactions_from_response(&json).unwrap();
+
+        assert_eq!(transactions.len(), 2);
+        assert_eq!(transactions[0].id(), "trans-1");
+        assert_eq!(transactions[0].amount(), Money::from_milliunits(-25000));
+        assert_eq!(transactions[1].id(), "trans-2");
+        assert_eq!(transactions[1].amount(), Money::from_milliunits(-15000));
+    }
+
+    #[test]
+    fn should_handle_invalid_transactions_response_format() {
+        let mapper = ResponseMapper::new();
+        let json = json!({
+            "data": {
+                "invalid_field": "not transactions"
+            }
+        });
+
+        let result = mapper.map_transactions_from_response(&json);
+        assert!(result.is_err());
+
+        if let Err(YnabError::ApiError(msg)) = result {
+            assert_eq!(msg, "Invalid transactions response format");
+        } else {
+            panic!("Expected ApiError");
+        }
     }
 }
